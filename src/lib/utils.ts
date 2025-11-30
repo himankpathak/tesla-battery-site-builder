@@ -7,6 +7,7 @@ import {
   MAX_ROW_WIDTH,
   BATTERY_ROW_GAP,
 } from "./constants"
+import { Timestamp } from "firebase/firestore"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -118,4 +119,31 @@ export function calculateManualLayout(
   })
 
   return placedBatteries
+}
+
+export const formatDate = (
+  timestamp: Timestamp | Date | string | undefined,
+) => {
+  if (!timestamp) return "Unknown date"
+  try {
+    let date: Date
+    if (timestamp instanceof Timestamp) {
+      date = timestamp.toDate()
+    } else if (timestamp instanceof Date) {
+      date = timestamp
+    } else {
+      date = new Date(timestamp)
+    }
+
+    return new Intl.DateTimeFormat("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date)
+  } catch (error) {
+    console.error("Error formatting date:", error)
+    return "Unknown date"
+  }
 }

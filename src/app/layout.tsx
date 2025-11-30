@@ -4,6 +4,8 @@ import { ThemeProvider } from "@/components/theme-provider"
 import Navbar from "@/components/navbar"
 import { ConfigurationProvider } from "@/contexts/configuration-context"
 import "./globals.css"
+import { Toaster } from "@/components/ui/sonner"
+import { AuthProvider } from "@/contexts/auth-context"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -36,8 +38,11 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <Navbar />
-          <ConfigurationProvider>{children}</ConfigurationProvider>
+          <AuthProvider>
+            <Navbar />
+            <ConfigurationProvider>{children}</ConfigurationProvider>
+            <Toaster position="bottom-right" richColors />
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

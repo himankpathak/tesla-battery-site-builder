@@ -1,6 +1,7 @@
 "use client"
 
 import { BATTERY_TYPES, TRANSFORMER_TYPES } from "@/lib/constants"
+import { Timestamp } from "firebase/firestore"
 import React, {
   createContext,
   useContext,
@@ -14,6 +15,10 @@ export interface BatteryDetails {
 }
 
 export interface SiteConfiguration {
+  id?: string
+  name?: string
+  createdAt?: Timestamp
+  updatedAt?: Timestamp
   cost: number
   energyProduction: number
   batteryDetails: BatteryDetails
@@ -21,6 +26,8 @@ export interface SiteConfiguration {
   widthOccupied: number
   totalBatteries: number
   totalTransformers: number
+  manualPackingEnabled?: boolean
+  batterySequence?: Array<{ id: string; battery: { id: string } }>
 }
 
 interface ConfigurationContextType {
@@ -28,6 +35,11 @@ interface ConfigurationContextType {
   updateBatteryDetails: (details: BatteryDetails) => void
   updateAreaOccupied: (length: number, width: number) => void
   resetConfig: () => void
+  loadDesign: (design: SiteConfiguration) => void
+  updateManualPackingState: (
+    enabled: boolean,
+    sequence?: Array<{ id: string; battery: { id: string } }>,
+  ) => void
 }
 
 const defaultConfig: SiteConfiguration = {
@@ -50,6 +62,13 @@ export function ConfigurationProvider({ children }: { children: ReactNode }) {
   const [batteryDetails, setBatteryDetails] = useState<BatteryDetails>({})
   const [lengthOccupied, setLengthOccupied] = useState(0)
   const [widthOccupied, setWidthOccupied] = useState(0)
+  const [designName, setDesignName] = useState<string | undefined>(undefined)
+  const [manualPackingEnabled, setManualPackingEnabled] = useState<
+    boolean | undefined
+  >(undefined)
+  const [batterySequence, setBatterySequence] = useState<
+    Array<{ id: string; battery: { id: string } }> | undefined
+  >(undefined)
 
   const updateBatteryDetails = (details: BatteryDetails) => {
     const totalBatteries = BATTERY_TYPES.reduce((sum, battery) => {
@@ -74,6 +93,30 @@ export function ConfigurationProvider({ children }: { children: ReactNode }) {
 
   const resetConfig = () => {
     setBatteryDetails({})
+    setDesignName(undefined)
+    setManualPackingEnabled(undefined)
+    setBatterySequence(undefined)
+    setTotalBatteries(0)
+    setTotalTransformers(0)
+  }
+
+  const loadDesign = (design: SiteConfiguration) => {
+    setBatteryDetails(design.batteryDetails)
+    setLengthOccupied(design.lengthOccupied)
+    setWidthOccupied(design.widthOccupied)
+    setTotalBatteries(design.totalBatteries)
+    setTotalTransformers(design.totalTransformers)
+    setDesignName(design.name)
+    setManualPackingEnabled(design.manualPackingEnabled)
+    setBatterySequence(design.batterySequence)
+  }
+
+  const updateManualPackingState = (
+    enabled: boolean,
+    sequence?: Array<{ id: string; battery: { id: string } }>,
+  ) => {
+    setManualPackingEnabled(enabled)
+    setBatterySequence(sequence)
   }
 
   const config: SiteConfiguration = useMemo(() => {
@@ -88,6 +131,7 @@ export function ConfigurationProvider({ children }: { children: ReactNode }) {
 
     return {
       ...defaultConfig,
+      name: designName,
       batteryDetails,
       cost: totalCost,
       energyProduction: totalEnergy,
@@ -95,6 +139,8 @@ export function ConfigurationProvider({ children }: { children: ReactNode }) {
       totalTransformers: totalTransformers,
       lengthOccupied,
       widthOccupied,
+      manualPackingEnabled,
+      batterySequence,
     }
   }, [
     batteryDetails,
@@ -102,11 +148,21 @@ export function ConfigurationProvider({ children }: { children: ReactNode }) {
     totalTransformers,
     lengthOccupied,
     widthOccupied,
+    designName,
+    manualPackingEnabled,
+    batterySequence,
   ])
 
   return (
     <ConfigurationContext.Provider
-      value={{ config, updateBatteryDetails, updateAreaOccupied, resetConfig }}
+      value={{
+        config,
+        updateBatteryDetails,
+        updateAreaOccupied,
+        resetConfig,
+        loadDesign,
+        updateManualPackingState,
+      }}
     >
       {children}
     </ConfigurationContext.Provider>
