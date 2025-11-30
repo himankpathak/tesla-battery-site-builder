@@ -50,7 +50,7 @@ export function SummaryPanel() {
         />
         <RenderCard
           Icon={Ruler}
-          title="Land Area Required"
+          title="Land Dimension Required"
           value={`${config.lengthOccupied} ft x ${config.widthOccupied} ft`}
           tooltipValue={`Total Area: ${landArea.toLocaleString()} sq ft`}
         />

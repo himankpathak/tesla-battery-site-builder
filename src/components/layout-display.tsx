@@ -6,6 +6,7 @@ import {
   closestCenter,
   KeyboardSensor,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragEndEvent,
@@ -36,6 +37,7 @@ import {
   calculateManualLayout,
   PlacedBattery,
 } from "@/lib/utils"
+import { cn } from "@/lib/utils"
 
 const BatteryVisual = memo(
   ({
@@ -60,6 +62,7 @@ const BatteryVisual = memo(
         style={{
           width: `${battery.length * BATTERY_SCALE - 2}px`,
           height: `${battery.width * BATTERY_SCALE - 2}px`,
+          touchAction: enableDrag ? "none" : "auto",
           ...style,
         }}
         className={`flex items-center justify-center rounded font-semibold text-white select-none ${battery.color} ${cursorClass} ${
@@ -224,7 +227,17 @@ export function LayoutDisplay() {
   }, [placedBatteries, scrollTop])
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 100,
+        tolerance: 8,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
@@ -307,66 +320,88 @@ export function LayoutDisplay() {
 
       <div
         onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
-        className="bg-muted/30 flex max-h-[600px] w-full justify-center overflow-auto rounded-lg border py-4"
+        className="bg-muted/30 flex max-h-[600px] w-full justify-center overflow-x-hidden overflow-y-auto rounded-lg border py-4"
       >
-        <DndContext
-          sensors={enableDragDrop ? sensors : []}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
+        <div
+          className={cn(
+            "origin-top scale-70 sm:scale-none",
+            enableDragDrop && "touch-auto",
+          )}
         >
-          <SortableContext
-            items={placedBatteries.map((item) => item.id)}
-            strategy={verticalListSortingStrategy}
+          <DndContext
+            sensors={enableDragDrop ? sensors : []}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
           >
-            <div
-              className="relative"
-              style={{
-                width: containerWidth,
-                height: containerHeight,
-                minHeight: 400,
-              }}
+            <SortableContext
+              items={placedBatteries.map((item) => item.id)}
+              strategy={verticalListSortingStrategy}
             >
               <div
-                className="text-muted-foreground absolute top-0 right-0 left-0 text-center text-xs font-medium"
-                style={{ left: 30, right: 30 }}
-              >
-                Width constraint: {MAX_ROW_WIDTH} ft
-              </div>
-
-              <div
-                className="border-muted-foreground/20 absolute border-r-2 border-l-2"
+                className="relative"
                 style={{
-                  left: 30,
-                  top: 30,
-                  width: MAX_ROW_WIDTH * BATTERY_SCALE,
-                  height: containerHeight - 60,
+                  width: containerWidth,
+                  height: containerHeight,
+                  minHeight: 400,
                 }}
-              />
+              >
+                <div
+                  className="text-muted-foreground absolute top-0 right-0 left-0 text-center text-xs font-medium"
+                  style={{ left: 30, right: 30 }}
+                >
+                  Width constraint: {MAX_ROW_WIDTH} ft
+                </div>
 
-              {visibleBatteries.map((item) => (
-                <SortableBattery
-                  key={item.id}
-                  item={item}
-                  useDragOverlay={enableDragDrop}
-                  enableDrag={enableDragDrop}
+                <div
+                  className="border-muted-foreground/20 absolute border-r-2 border-l-2"
+                  style={{
+                    left: 30,
+                    top: 30,
+                    width: MAX_ROW_WIDTH * BATTERY_SCALE,
+                    height: containerHeight - 60,
+                  }}
                 />
-              ))}
+
+                {visibleBatteries.map((item) => (
+                  <SortableBattery
+                    key={item.id}
+                    item={item}
+                    useDragOverlay={enableDragDrop}
+                    enableDrag={enableDragDrop}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+            {enableDragDrop && (
+              <DragOverlay dropAnimation={null}>
+                {activeBattery ? (
+                  <BatteryVisual
+                    battery={activeBattery.battery}
+                    isDragging={true}
+                    enableDrag={true}
+                    style={{ cursor: "grabbing" }}
+                  />
+                ) : null}
+              </DragOverlay>
+            )}
+          </DndContext>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap justify-center gap-3">
+        {[...BATTERY_TYPES, ...TRANSFORMER_TYPES].map((battery) => {
+          const count = config.batteryDetails[battery.id] || 0
+          if (count === 0) return null
+          return (
+            <div key={battery.id} className="flex items-center gap-1.5 text-xs">
+              <div className={cn("h-3 w-3 rounded-xs", battery.color)} />
+              <span>
+                {battery.name} ({config.batteryDetails[battery.id]})
+              </span>
             </div>
-          </SortableContext>
-          {enableDragDrop && (
-            <DragOverlay dropAnimation={null}>
-              {activeBattery ? (
-                <BatteryVisual
-                  battery={activeBattery.battery}
-                  isDragging={true}
-                  enableDrag={true}
-                  style={{ cursor: "grabbing" }}
-                />
-              ) : null}
-            </DragOverlay>
-          )}
-        </DndContext>
+          )
+        })}
       </div>
     </div>
   )
